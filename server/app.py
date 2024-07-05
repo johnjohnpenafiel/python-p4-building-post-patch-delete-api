@@ -52,20 +52,54 @@ def game_by_id(id):
 
     return response
 
-@app.route('/reviews')
+@app.route('/reviews', methods=['GET', 'POST'])
 def reviews():
 
-    reviews = []
-    for review in Review.query.all():
-        review_dict = review.to_dict()
-        reviews.append(review_dict)
+    if request.method == 'GET':
+        reviews = Review.query.all()
+        return[r.to_dict() for r in reviews], 200
 
-    response = make_response(
-        reviews,
-        200
-    )
+    elif request.method == 'POST':
+        new_review = Review(
+            score=request.form.get('score'),
+            comment=request.form.get('comment'),
+            game_id=request.form.get('game_id'),
+            user_id=request.form.get('user_id')
+        )
+        db.session.add(new_review)
+        db.session.commit()
+        
+        return new_review.to_dict(), 201
 
-    return response
+@app.route('/reviews/<int:id>', methods=['GET', 'DELETE', 'PATCH'])
+def review_by_id(id):
+    review = Review.query.filter(Review.id == id).first()
+    
+    if request.method == 'GET':
+        return review.to_dict(), 200
+
+    elif request.method == 'PATCH':
+        for attr in request.form:
+            setattr(review, attr, request.form.get(attr))
+
+        db.session.add(review)
+        db.session.commit()
+
+        return review.to_dict(), 200
+
+
+    elif request.method == 'DELETE':
+        db.session.delete(review)
+        db.session.commit()
+
+        response_body = {
+            "delete_succesful" : True,
+            "message" : "review deleted"
+        }
+
+        return response_body, 200
+
+
 
 @app.route('/users')
 def users():
